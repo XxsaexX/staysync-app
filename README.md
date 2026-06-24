@@ -1,5 +1,7 @@
 # StaySync — web app (public deployment)
 
+**▶ Live:** https://xxsaexx.github.io/staysync-app/
+
 Public hosting of the StaySync reservation tool (a single-page app), served via GitHub Pages.
 
 This repository contains **only the client build** — three files, no secrets:
