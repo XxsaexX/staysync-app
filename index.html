@@ -626,7 +626,8 @@ tr:hover .code-cell.hidden{filter:blur(0);}
           <select class="form-select" id="u-role">
             <option value="staff">Staff</option>
             <option value="tech_staff">Tech Staff</option>
-            <option value="owner">Owner</option>
+            <!-- Owner intentionally omitted: owners are seeded manually / promoted via the role buttons; RLS (insert_non_owner) blocks granting owner here. -->
+
           </select>
         </div>
       </div>
@@ -2562,6 +2563,7 @@ async function submitAddUser(){
   errEl.classList.remove('show');
   if(!name){errEl.innerHTML='Please enter a full name.';errEl.classList.add('show');return;}
   if(!email||!isValidEmail(email)){errEl.innerHTML='Please enter a valid email address.';errEl.classList.add('show');return;}
+  if(role==='owner'){errEl.innerHTML='Owners are added manually for safety — grant Staff or Tech, then promote if needed.';errEl.classList.add('show');return;}
   const btn=document.querySelector('#panel-users .btn-submit');
   if(btn){btn.disabled=true;btn.textContent='Saving…';}
   // Wrap Supabase calls with a timeout so a hanging RLS policy surfaces as an error
@@ -2599,40 +2601,38 @@ async function submitAddUser(){
       );
       if(insErr) throw insErr;
     }
-    // Send invite via the admin-user Edge Function — server-side service key, JWT-gated to owners
-    const {data:inviteData,error:inviteErr}=await db.functions.invoke('admin-user',{
-      body:{action:'invite_native',email,name,redirect_to:window.location.href}
+    // Onboard via a server-generated link delivered through EmailJS. Supabase's own SMTP does not
+    // deliver on this project, so we never use invite_native. generate_link returns the action link
+    // and sends nothing; we email it ourselves. redirect_to must be on the Supabase Auth allow-list;
+    // origin+pathname drops any stale #hash/?query. (Future hardening: pin a CONFIG.SITE_URL constant.)
+    const redirect=window.location.origin+window.location.pathname;
+    // 1) New user → invite link (creates the auth user 'invited'; lets them set a password).
+    let {data:gl,error:glErr}=await db.functions.invoke('admin-user',{
+      body:{action:'generate_link',email,type:'invite',redirect_to:redirect}
     });
-    if(inviteErr) throw new Error(`Invite failed: ${inviteErr.message}`);
-    if(!inviteData?.ok){
-      const errText=(inviteData?.error||'').toLowerCase();
-      const status=inviteData?.status;
-      console.warn('[invite] failed:',inviteData);
-      // User already has a confirmed account — generate a one-time recovery link instead
-      // (bypasses SMTP rate limits; owner copies and forwards via any channel)
-      if(errText.includes('already')||errText.includes('registered')||status===422){
-        const {data:glData,error:glErr}=await db.functions.invoke('admin-user',{
-          body:{action:'generate_link',email,type:'recovery',redirect_to:window.location.href}
-        });
-        if(!glErr && glData?.ok && glData?.link){
-          await emailjs.send(CONFIG.EMAILJS_SERVICE_ID,CONFIG.EMAILJS_INVITE_TEMPLATE_ID,{
-            to_name:name||email,
-            email:email,
-            invite_link:glData.link,
-          });
-          showToast(`Access link emailed to ${email}`,'success');
-          document.getElementById('u-name').value='';
-          document.getElementById('u-email').value='';
-          renderUsersList();
-          return;
-        }
-        // generate_link also failed — fallback to password reset email (anon-key flow, no service key)
-        await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
-      } else {
-        throw new Error(`Invite failed: ${errText||status||'unknown'}`);
+    if(glErr) throw new Error(`Invite failed: ${glErr.message}`);
+    // 2) Existing auth user → invite returns 422 (email_exists). Fall back to a MAGICLINK, NOT
+    //    recovery: recovery for a never-confirmed/password-less invitee can return a link that does
+    //    not authenticate while reporting success. magiclink logs any existing user in; fetchRole
+    //    then heals the row and they set a password from settings. Key on HTTP status, not wording.
+    if(!gl?.ok || !gl?.link){
+      if(gl?.status===422 || /exist|already|registered/.test((gl?.error||'').toLowerCase())){
+        ({data:gl,error:glErr}=await db.functions.invoke('admin-user',{
+          body:{action:'generate_link',email,type:'magiclink',redirect_to:redirect}
+        }));
       }
+      if(glErr||!gl?.ok||!gl?.link) throw new Error(`Invite failed: ${gl?.error||glErr?.message||'could not generate link'}`);
     }
-    showToast(`Invite sent to ${email} — they'll receive an email to set up their password`,'success');
+    // 3) Deliver. Never log gl.link — it is a single-use account credential. If the link generated
+    //    but the email send fails, say so precisely; the role row exists and a re-click re-sends.
+    try{
+      await emailjs.send(CONFIG.EMAILJS_SERVICE_ID,CONFIG.EMAILJS_INVITE_TEMPLATE_ID,{
+        to_name:name||email, email, invite_link:gl.link,
+      });
+    }catch(mailErr){
+      throw new Error(`Link generated but the email failed to send (${mailErr?.text||mailErr?.message||'EmailJS error'}). Click Grant Access again to retry.`);
+    }
+    showToast(`Access link emailed to ${email} — they'll set their password from it`,'success');
     document.getElementById('u-name').value='';
     document.getElementById('u-email').value='';
     renderUsersList();
@@ -2733,22 +2733,19 @@ function runStartupSequence(){
 }
 
 async function fetchRole(userId, email){
-  // Step A: get role (never fails silently — always logs the real error)
-  async function queryRow(filter){
-    // Try with permissions column first; if column missing, retry without it
-    let res=await db.from('user_roles').select('id,role,permissions').match(filter).maybeSingle();
+  const key=(email||'').trim().toLowerCase();
+  // Shared lookup: select incl. permissions + user_id; if the permissions column is missing, retry
+  // without it. Returns the full {data,error} so callers distinguish "no row" (continue) from
+  // "errored" (fail closed — must NOT fall through to an insert).
+  async function queryRow(applyFilter){
+    let res=await applyFilter(db.from('user_roles').select('id,role,permissions,user_id')).maybeSingle();
     if(res.error && res.error.message.includes('permissions')){
-      // permissions column not yet added — fall back gracefully
       console.warn('[StaySync] permissions column missing — run: ALTER TABLE user_roles ADD COLUMN permissions JSONB DEFAULT \'{}\'::jsonb');
-      res=await db.from('user_roles').select('id,role').match(filter).maybeSingle();
+      res=await applyFilter(db.from('user_roles').select('id,role,user_id')).maybeSingle();
     }
-    if(res.error) console.error('[StaySync] fetchRole error:',res.error.message);
-    return res.data||null;
+    return res;
   }
-
-  // 1. Returning user — look up by user_id
-  let row=await queryRow({user_id:userId});
-  if(row){
+  async function applyRow(row){
     if(row.permissions?.suspended){
       await db.auth.signOut();
       const errEl=document.getElementById('loginError');
@@ -2759,23 +2756,34 @@ async function fetchRole(userId, email){
     return row.role;
   }
 
-  // 2. First login — email was pre-authorized by owner (user_id still NULL)
-  row=await queryRow({email, user_id:null});
-  if(row){
-    if(row.permissions?.suspended){
-      await db.auth.signOut();
-      const errEl=document.getElementById('loginError');
-      if(errEl){errEl.textContent='Your access has been suspended. Contact the property manager.';errEl.style.display='block';}
-      return null;
+  // 1. Returning user — look up by auth user_id (always a valid uuid).
+  let res=await queryRow(q=>q.eq('user_id',userId));
+  if(res.error){ console.error('[StaySync] fetchRole user_id lookup error:',res.error.message); return null; }
+  if(res.data) return await applyRow(res.data);
+
+  // 2. First login, OR a returning user whose user_id link was never set.
+  //    Look up by EMAIL only — email is unique and the SELECT RLS policy is using(true), so a
+  //    NULL-user_id row is readable. Use .eq on the lowercased key: NOT .match({user_id:null})
+  //    (PostgREST emits user_id=eq.null -> 400 invalid uuid), and NOT .ilike (an '_' in an email
+  //    local-part is an ILIKE wildcard). The admin insert path already lowercases; a one-time
+  //    `update user_roles set email=lower(email)` makes any legacy mixed-case row exact.
+  if(key){
+    res=await queryRow(q=>q.eq('email',key));
+    if(res.error){ console.error('[StaySync] fetchRole email lookup error:',res.error.message); return null; } // fail closed
+    if(res.data){
+      const row=res.data;
+      // Self-heal the auth link so future logins hit step 1 and removeUser() can delete the identity.
+      // Only when unlinked or already ours (RLS also scopes this UPDATE to email=auth.email()).
+      if(row.user_id==null || row.user_id===userId){
+        const {error:upErr}=await db.from('user_roles').update({user_id:userId}).eq('id',row.id);
+        if(upErr) console.warn('[StaySync] fetchRole link warn:',upErr.message);
+      }
+      return await applyRow(row);
     }
-    // Link the auth user_id to this record
-    await db.from('user_roles').update({user_id:userId}).eq('id',row.id);
-    currentPermissions={...ROLE_DEFAULTS[row.role]||ROLE_DEFAULTS.staff,...(row.permissions||{})};
-    return row.role;
   }
 
-  // 3. Brand-new user — auto-create as staff (insert may fail if permissions col missing; that's OK)
-  const insertPayload={user_id:userId,email,role:'staff'};
+  // 3. Brand-new user — auto-create as staff (won't fire with open sign-up off; harmless if it does).
+  const insertPayload={user_id:userId,email:key,role:'staff'};
   try{ await db.from('user_roles').insert({...insertPayload,permissions:{}}); }
   catch{ await db.from('user_roles').insert(insertPayload); }
   currentPermissions={...ROLE_DEFAULTS.staff};
