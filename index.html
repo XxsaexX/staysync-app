@@ -21,6 +21,16 @@ header{border-bottom:1px solid var(--border);padding:18px 40px;display:flex;alig
 .sheets-status.connected{border-color:rgba(66,245,164,0.4);color:var(--success);}
 .sheets-status.error{border-color:rgba(245,66,66,0.4);color:var(--danger);}
 
+/* ── RESPONSIVE HEADER ── keep chrome from wrapping; compact below ~960px */
+.sheets-status,#logoutBtn{white-space:nowrap;}
+@media(max-width:960px){
+  header .logo span[data-i18n="header.sub"]{display:none;}
+  #userEmailDisplay{display:none!important;}
+  .sheets-status{display:none;}               /* hide "Supabase: connected" pill */
+  .sheets-status.error{display:inline-block;} /* but keep it if Supabase errors */
+  .header-right{gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+}
+
 .container{max-width:1280px;margin:0 auto;padding:40px;}
 .section-title{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:var(--text);letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;}
 
