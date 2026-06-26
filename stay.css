@@ -64,6 +64,12 @@ h1.serif{margin:0;font-size:1.7rem}
 .btn.primary{background:var(--accent);color:#0f0f0f}
 .btn.ghost{background:transparent;color:var(--accent);border-color:rgba(201,245,66,.4)}
 
+/* Are-you-sure step before the set-once arrival announcement */
+#arrive-confirm{margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
+.confirm-q{margin:0 0 4px;font-weight:600}
+.confirm-actions{display:flex;gap:10px;margin-top:12px}
+.confirm-actions .btn{width:auto;flex:1}
+
 .confirm{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:6px 0}
 .confirm .check{
   width:42px;height:42px;border-radius:50%;background:rgba(66,245,164,.15);color:var(--success);

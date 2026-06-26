@@ -26,6 +26,10 @@ const STRINGS = {
     arrival:'Arrival', arrive_prompt:'Let the host know you’re on the way.',
     eta:'Estimated arrival', eta_choose:'Choose…',
     arrive_cta:'I’m arriving', arrive_thanks:'Thanks — your host has been notified.',
+    arrive_confirm_q:'Let your host know you’re arriving?',
+    arrive_confirm_yes:'Yes, notify host', arrive_confirm_no:'Not yet',
+    arrive_confirm_eta:'We’ll tell your host you’ll arrive ',
+    arrive_confirm_noeta:'We’ll let your host know you’re on the way.',
     getting_in:'Getting in',
     checkin_text:'Enter the door code on the keypad at the main entrance. If the keypad doesn’t respond, hold the # key for two seconds and try again. Trouble? Reply to your booking email and the host will help.',
     welcome:'Welcome', state_upcoming:'Your stay hasn’t started yet.',
@@ -45,6 +49,10 @@ const STRINGS = {
     arrival:'Llegada', arrive_prompt:'Avisa al anfitrión de que estás en camino.',
     eta:'Hora estimada', eta_choose:'Elige…',
     arrive_cta:'Estoy llegando', arrive_thanks:'Gracias — hemos avisado al anfitrión.',
+    arrive_confirm_q:'¿Avisar a tu anfitrión de que estás llegando?',
+    arrive_confirm_yes:'Sí, avisar', arrive_confirm_no:'Todavía no',
+    arrive_confirm_eta:'Le diremos a tu anfitrión que llegarás ',
+    arrive_confirm_noeta:'Avisaremos a tu anfitrión de que estás en camino.',
     getting_in:'Cómo entrar',
     checkin_text:'Introduce el código en el teclado de la entrada principal. Si no responde, mantén la tecla # dos segundos e inténtalo de nuevo. ¿Problemas? Responde a tu correo de reserva y el anfitrión te ayudará.',
     welcome:'Hola', state_upcoming:'Tu estancia aún no ha comenzado.',
@@ -73,6 +81,9 @@ function applyStatic(){
   });
   $('lang-toggle').textContent = LANG === 'en' ? 'ES' : 'EN';
   if (STATE) renderStay(STATE); // re-render dynamic bits in new language
+  // the confirm detail is JS-built (not data-i18n) — refresh it if the step is open
+  const ac = $('arrive-confirm');
+  if (ac && !ac.classList.contains('hidden')) $('arrive-confirm-detail').textContent = etaDetailText();
 }
 
 function fmtDate(iso){
@@ -147,11 +158,25 @@ async function revealCode(){
   }catch(e){ btn.disabled = false; btn.textContent = t('reveal'); }
 }
 
+// "Are you sure?" step — the announcement is set-once, so confirm before the POST.
+function etaDetailText(){
+  const eta = $('eta-select').value;
+  return eta ? (t('arrive_confirm_eta') + (ETA_LABELS[LANG][eta]||eta)) : t('arrive_confirm_noeta');
+}
+function showConfirm(){
+  $('arrive-confirm-detail').textContent = etaDetailText();
+  hide($('arrive-btn')); show($('arrive-confirm'));
+  $('arrive-yes').focus();
+}
+function cancelConfirm(){
+  hide($('arrive-confirm')); show($('arrive-btn'));
+}
+
 let announcing = false;
 async function announce(){
   if (announcing) return;
   const eta = $('eta-select').value;
-  const btn = $('arrive-btn');
+  const btn = $('arrive-yes');
   announcing = true; btn.disabled = true; btn.textContent = t('sending');
   try{
     const rows = await rpc('guest_announce_arrival', { p_token: token(), p_eta: eta || null });
@@ -160,7 +185,7 @@ async function announce(){
     const usedEta = (row && row.eta) || eta;
     $('arrive-eta-line').textContent = usedEta ? t('eta_label')+(ETA_LABELS[LANG][usedEta]||usedEta) : '';
   }catch(e){
-    announcing = false; btn.disabled = false; btn.textContent = t('arrive_cta');
+    announcing = false; btn.disabled = false; btn.textContent = t('arrive_confirm_yes');
   }
 }
 
@@ -168,7 +193,9 @@ async function announce(){
 async function init(){
   applyStatic();
   $('reveal-btn').addEventListener('click', revealCode);
-  $('arrive-btn').addEventListener('click', announce);
+  $('arrive-btn').addEventListener('click', showConfirm);
+  $('arrive-yes').addEventListener('click', announce);
+  $('arrive-no').addEventListener('click', cancelConfirm);
   $('lang-toggle').addEventListener('click', ()=>{
     LANG = LANG==='en'?'es':'en'; localStorage.setItem('nuntui_lang', LANG); applyStatic();
   });

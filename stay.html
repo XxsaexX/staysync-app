@@ -89,6 +89,15 @@
             </select>
           </label>
           <button id="arrive-btn" class="btn primary" type="button" data-i18n="arrive_cta">I’m arriving</button>
+          <!-- Confirm step — the announcement is set-once, so make the guest accept it deliberately. -->
+          <div id="arrive-confirm" class="hidden">
+            <p class="confirm-q" data-i18n="arrive_confirm_q">Let your host know you’re arriving?</p>
+            <p class="muted small" id="arrive-confirm-detail"></p>
+            <div class="confirm-actions">
+              <button id="arrive-yes" class="btn primary" type="button" data-i18n="arrive_confirm_yes">Yes, notify host</button>
+              <button id="arrive-no" class="btn ghost" type="button" data-i18n="arrive_confirm_no">Not yet</button>
+            </div>
+          </div>
         </div>
         <div id="arrive-done" class="hidden confirm">
           <span class="check" aria-hidden="true">✓</span>
