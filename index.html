@@ -54,7 +54,7 @@ header{border-bottom:1px solid var(--border);padding:18px 40px;display:flex;alig
 .calendar-inner{overflow-x:auto;}
 .cal-week-row{position:relative;border-bottom:1px solid rgba(255,255,255,0.05);}
 .cal-week-row:last-child{border-bottom:none;}
-.cal-event{position:absolute;height:20px;display:flex;align-items:center;padding:0 8px;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;z-index:2;transition:opacity 0.15s;box-sizing:border-box;}
+.cal-event{position:absolute;height:20px;display:flex;align-items:center;padding:0 8px;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;z-index:2;transition:opacity 0.15s;box-sizing:border-box;}
 .cal-event:hover{opacity:0.78;}
 .cal-event.arriving{background:rgba(201,245,66,0.18);color:var(--accent);border:1px solid rgba(201,245,66,0.38);}
 .cal-event.future{background:rgba(66,245,201,0.11);color:var(--accent2);border:1px solid rgba(66,245,201,0.28);}
@@ -63,6 +63,34 @@ header{border-bottom:1px solid var(--border);padding:18px 40px;display:flex;alig
 .cal-nav-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--text);border-radius:6px;padding:4px 11px;font-size:12px;cursor:pointer;transition:background 0.15s;font-family:inherit;line-height:1.5;}
 .cal-nav-btn:hover{background:rgba(255,255,255,0.13);}
 .cal-empty{padding:32px;text-align:center;font-size:12px;color:var(--muted);font-style:italic;}
+
+/* ── APARTMENT STATUS BOARD ── */
+.apartments-panel{margin-bottom:24px;}
+.apt-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap;}
+.apt-legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+.apt-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
+.apt-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.apt-dot--free{background:#42f5a4;}
+.apt-dot--occupied{background:#f5a442;}
+.apt-dot--unavailable{background:#f58fb4;}
+.apt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;}
+.apt-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;}
+.apt-card__status{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:6px 10px;font-family:'DM Mono',monospace;}
+.apt-card__status--free{background:rgba(66,245,164,0.12);color:#42f5a4;border-bottom:1px solid rgba(66,245,164,0.25);}
+.apt-card__status--occupied{background:rgba(245,164,66,0.12);color:#f5a442;border-bottom:1px solid rgba(245,164,66,0.25);}
+.apt-card__status--unavailable{background:rgba(245,143,180,0.12);color:#f58fb4;border-bottom:1px solid rgba(245,143,180,0.25);}
+.apt-card__img{width:100%;aspect-ratio:16/10;object-fit:cover;background:var(--surface2);display:block;}
+.apt-card__body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+.apt-card__id{font-size:15px;font-weight:700;font-family:'DM Serif Display',serif;}
+.apt-card__occ{font-size:12px;color:var(--muted);}
+.apt-card__occ b{color:var(--text);font-weight:600;}
+.apt-seg{display:flex;gap:4px;margin-top:2px;}
+.apt-seg button{flex:1;font-size:10px;font-family:'DM Mono',monospace;padding:5px 4px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;}
+.apt-seg button:hover{border-color:var(--text);color:var(--text);}
+.apt-seg button.active.s-free{background:rgba(66,245,164,0.16);color:#42f5a4;border-color:rgba(66,245,164,0.4);}
+.apt-seg button.active.s-occupied{background:rgba(245,164,66,0.16);color:#f5a442;border-color:rgba(245,164,66,0.4);}
+.apt-seg button.active.s-unavailable{background:rgba(245,143,180,0.16);color:#f58fb4;border-color:rgba(245,143,180,0.4);}
+.apt-empty{color:var(--muted);font-size:13px;font-style:italic;padding:20px;text-align:center;grid-column:1/-1;}
 
 /* ── 7-DAY AGENDA (mobile only) ── */
 .mobile-agenda{display:none;}
@@ -459,6 +487,19 @@ tr:hover .code-cell.hidden{filter:blur(0);}
     </div>
   </div>
 
+  <!-- ── APARTMENT STATUS BOARD (desktop) ───────────────── -->
+  <section class="apartments-panel desktop-only">
+    <div class="apt-head">
+      <p class="section-title" style="margin-bottom:0;" data-i18n="apt.title">Apartments</p>
+      <div class="apt-legend">
+        <span class="apt-legend-item"><span class="apt-dot apt-dot--free"></span><span data-i18n="apt.free">Free</span></span>
+        <span class="apt-legend-item"><span class="apt-dot apt-dot--occupied"></span><span data-i18n="apt.occupied">Occupied</span></span>
+        <span class="apt-legend-item"><span class="apt-dot apt-dot--unavailable"></span><span data-i18n="apt.unavailable">Unavailable</span></span>
+      </div>
+    </div>
+    <div class="apt-grid" id="aptGrid"></div>
+  </section>
+
   <div class="main-grid">
     <div>
       <p class="section-title" data-i18n="panel.title">Reservations</p>
@@ -504,6 +545,22 @@ tr:hover .code-cell.hidden{filter:blur(0);}
       <button class="btn-confirm" id="modalSendBtn" onclick="confirmSend()" data-i18n="modal.confirm">&#10003; Confirm &amp; Send</button>
       <button class="btn-cancel" onclick="closeModal()" data-i18n="modal.cancel">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- RESERVATION QUICK PREVIEW (opened by clicking a calendar entry) -->
+<div class="modal-overlay" id="resPreviewOverlay" style="z-index:550;" onclick="if(event.target===this)closeResPreview()">
+  <div class="modal" style="width:420px;padding:24px 26px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;" data-i18n="rp.title">Reservation</div>
+        <div id="rp-name" style="font-family:'DM Serif Display',serif;font-size:22px;line-height:1.2;margin-top:2px;"></div>
+      </div>
+      <button onclick="closeResPreview()" title="Close" style="flex:none;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:9px;cursor:pointer;font-size:15px;line-height:1;">&#10005;</button>
+    </div>
+    <div id="rp-status" style="margin:12px 0 4px;"></div>
+    <div id="rp-body"></div>
+    <div id="rp-actions" style="margin-top:18px;display:flex;gap:8px;"></div>
   </div>
 </div>
 
@@ -638,6 +695,7 @@ tr:hover .code-cell.hidden{filter:blur(0);}
           <label class="form-label">Role</label>
           <select class="form-select" id="u-role">
             <option value="staff">Staff</option>
+            <option value="landlord">Landlord</option>
             <option value="tech_staff">Tech Staff</option>
             <!-- Owner intentionally omitted: owners are seeded manually / promoted via the role buttons; RLS (insert_non_owner) blocks granting owner here. -->
 
@@ -799,6 +857,20 @@ const ROLE_DEFAULTS = {
     manage_rooms:      true,
     manage_users:      true,
     export_data:       true,
+    manage_apartment_status: true,
+  },
+  // Landlord: external property owner. Like staff, but cannot manage users and
+  // CAN set apartment status (free / occupied / unavailable).
+  landlord: {
+    send_codes:        true,
+    view_codes:        false,
+    admin_panel:       true,
+    add_reservations:  true,
+    edit_reservations: false,
+    manage_rooms:      false,
+    manage_users:      false,
+    export_data:       false,
+    manage_apartment_status: true,
   },
   tech_staff: {
     send_codes:        true,
@@ -809,6 +881,7 @@ const ROLE_DEFAULTS = {
     manage_rooms:      true,
     manage_users:      false,
     export_data:       true,
+    manage_apartment_status: false,
   },
   staff: {
     send_codes:        true,
@@ -819,6 +892,7 @@ const ROLE_DEFAULTS = {
     manage_rooms:      false,
     manage_users:      false,
     export_data:       false,
+    manage_apartment_status: false,
   }
 };
 // Labels shown in the USERS tab permission editor
@@ -831,6 +905,7 @@ const PERM_LABELS = {
   manage_rooms:      'Manage rooms',
   manage_users:      'Manage users',
   export_data:       'Export CSV / PDF',
+  manage_apartment_status: 'Change apartment status',
 };
 let currentPermissions = {};   // Loaded from DB after login (merged with role defaults)
 
@@ -930,6 +1005,12 @@ const STRINGS={
     'apt.select':'— select dates to see available rooms —',
     'apt.hint':'(select dates first)','apt.no_rooms':'No rooms available for those dates',
     'apt.editing':'(editing — all rooms shown)',
+    'apt.title':'Apartments','apt.apartment':'Apartment','apt.occupancy':'Occupancy',
+    'apt.free':'Free','apt.occupied':'Occupied','apt.unavailable':'Unavailable',
+    'apt.occupied_until':'Occupied until','apt.next_in':'Next check-in','apt.vacant':'Vacant',
+    'rp.title':'Reservation','rp.apartment':'Apartment','rp.checkin':'Check-in','rp.checkout':'Check-out',
+    'rp.nights':'Nights','rp.email':'Email','rp.code':'Door code','rp.edit':'Edit','rp.close':'Close',
+    'rp.double':'Double-booked','rp.s_arriving':'Arriving','rp.s_future':'Upcoming','rp.s_sent':'Code sent',
     'modal.validating':'Validating reservation',
     'modal.desc':'Checking door code matches apartment before sending.',
     'check.found':'Reservation found for today','check.no_conflict':'No double-booking conflict',
@@ -1014,6 +1095,12 @@ const STRINGS={
     'apt.select':'— selecciona fechas para ver habitaciones —',
     'apt.hint':'(selecciona las fechas primero)','apt.no_rooms':'Sin habitaciones disponibles para esas fechas',
     'apt.editing':'(editando — se muestran todas las habitaciones)',
+    'apt.title':'Apartamentos','apt.apartment':'Apartamento','apt.occupancy':'Ocupación',
+    'apt.free':'Libre','apt.occupied':'Ocupado','apt.unavailable':'No disponible',
+    'apt.occupied_until':'Ocupado hasta','apt.next_in':'Próxima entrada','apt.vacant':'Libre',
+    'rp.title':'Reserva','rp.apartment':'Apartamento','rp.checkin':'Entrada','rp.checkout':'Salida',
+    'rp.nights':'Noches','rp.email':'Email','rp.code':'Código','rp.edit':'Editar','rp.close':'Cerrar',
+    'rp.double':'Doble reserva','rp.s_arriving':'Llegando','rp.s_future':'Próxima','rp.s_sent':'Código enviado',
     'modal.validating':'Validando reserva',
     'modal.desc':'Comprobando que el código de puerta coincide con el apartamento.',
     'check.found':'Reserva encontrada para hoy','check.no_conflict':'Sin conflicto de doble reserva',
@@ -1183,7 +1270,7 @@ async function loadFromSupabase(){
       checkout:r.checkout?r.checkout.toISOString():null,
     }))));
 
-    updateStats();renderTable();renderCalendar();renderMobileAgenda();
+    updateStats();renderTable();renderCalendar();renderMobileAgenda();renderApartments();
     updateSheetsStatus('connected');
     showToast(`Loaded ${reservations.length} reservations, ${rooms.length} rooms, ${codes.length} codes`,'success');
   }catch(e){
@@ -1462,6 +1549,7 @@ function renderCalendar(){
       const dateLocale=lang==='es'?'es-ES':'en-GB';
       bar.title=`${r.name} · ${r.apt} · ${r.ci.toLocaleDateString(dateLocale)} → ${r.co.toLocaleDateString(dateLocale)}`;
       bar.textContent=`${r.apt}: ${r.name}`;
+      bar.addEventListener('click',ev=>{ev.stopPropagation();openReservationPreview(r.id);});
       weekWrap.appendChild(bar);
     });
 
@@ -1471,6 +1559,36 @@ function renderCalendar(){
   wrap.innerHTML='';
   wrap.appendChild(grid);
 }
+
+// ── RESERVATION QUICK PREVIEW (opened by clicking a calendar entry) ──
+function openReservationPreview(id){
+  const r=reservations.find(x=>String(x.id)===String(id));
+  if(!r) return;
+  const dl=lang==='es'?'es-ES':'en-GB';
+  const fmt=d=>d?d.toLocaleDateString(dl,{weekday:'short',day:'2-digit',month:'short',year:'numeric'}):'—';
+  const canView=hasPermission('view_codes');                 // mirror the table's code gating
+  const code=canView?(r.code&&r.code!=='—'?r.code:'—'):'••••';
+  const sMap={arriving:{t:t('rp.s_arriving'),c:'var(--accent)'},sent:{t:t('rp.s_sent'),c:'var(--success)'},future:{t:t('rp.s_future'),c:'var(--accent2)'}};
+  const s=sMap[r.status]||{t:(r.status||'—'),c:'var(--muted)'};
+  document.getElementById('rp-name').textContent=r.name||'—';
+  document.getElementById('rp-status').innerHTML=
+    `<span style="display:inline-block;font-size:11px;font-weight:700;font-family:'DM Mono',monospace;padding:3px 10px;border-radius:20px;color:${s.c};border:1px solid ${s.c};background:rgba(255,255,255,0.03);">${s.t}</span>`
+    +(r.doubleBooked?` <span style="font-size:11px;color:var(--warn);font-family:'DM Mono',monospace;">&#9888; ${t('rp.double')}</span>`:'');
+  const row=(label,val)=>`<div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;align-items:center;"><span style="color:var(--muted);">${label}</span><span style="font-weight:600;text-align:right;word-break:break-word;">${val}</span></div>`;
+  document.getElementById('rp-body').innerHTML=
+    row(t('rp.apartment'), r.apt||'—')
+    +row(t('rp.checkin'), fmt(r.checkin))
+    +row(t('rp.checkout'), fmt(r.checkout))
+    +row(t('rp.nights'), (r.nights||'—')+'')
+    +row(t('rp.email'), r.email?`<a href="mailto:${r.email}" style="color:var(--accent2);text-decoration:none;">${r.email}</a>`:'—')
+    +row(t('rp.code'), `<span style="font-family:'DM Mono',monospace;letter-spacing:1px;">${code}</span>`);
+  const acts=[];
+  if(hasPermission('edit_reservations')) acts.push(`<button class="btn-confirm" style="flex:1;" onclick="closeResPreview();editReservation('${r.id}')">&#9998; ${t('rp.edit')}</button>`);
+  acts.push(`<button class="btn-cancel" style="flex:${acts.length?'0 0 auto':'1'};" onclick="closeResPreview()">${t('rp.close')}</button>`);
+  document.getElementById('rp-actions').innerHTML=acts.join('');
+  document.getElementById('resPreviewOverlay').classList.add('show');
+}
+function closeResPreview(){ document.getElementById('resPreviewOverlay').classList.remove('show'); }
 
 // ── RENDER TABLE ─────────────────────────────────────
 // Sorts arriving-today guests to the top, then by check-in date.
@@ -2339,6 +2457,85 @@ async function toggleStatus(id){
   renderTable();renderCalendar();renderAdminList();
 }
 
+// ── APARTMENT STATUS BOARD ───────────────────────────
+const APT_STATUSES=['free','occupied','unavailable'];
+function aptStatusOf(room){
+  const s=String(room.status||'free').toLowerCase();
+  return APT_STATUSES.includes(s)?s:'free';
+}
+function aptStatusColor(s){ return s==='occupied'?'#f5a442':s==='unavailable'?'#f58fb4':'#42f5a4'; }
+// Generic apartment placeholder image — hue varies per room so cards look distinct.
+function aptPlaceholder(id){
+  let h=0; for(const c of String(id||'')) h=(h*31+c.charCodeAt(0))%360;
+  const svg=`<svg xmlns='http://www.w3.org/2000/svg' width='320' height='200'>`
+    +`<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>`
+    +`<stop offset='0' stop-color='hsl(${h},22%,26%)'/><stop offset='1' stop-color='hsl(${h},20%,15%)'/></linearGradient></defs>`
+    +`<rect width='320' height='200' fill='url(#g)'/>`
+    +`<g fill='none' stroke='hsl(${h},30%,62%)' stroke-width='4' opacity='0.6' stroke-linejoin='round'>`
+    +`<rect x='66' y='118' width='188' height='46' rx='10'/><line x1='66' y1='140' x2='254' y2='140'/>`
+    +`<rect x='124' y='44' width='72' height='56' rx='4'/><line x1='160' y1='44' x2='160' y2='100'/>`
+    +`<line x1='124' y1='72' x2='196' y2='72'/></g></svg>`;
+  return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);
+}
+// Occupancy line — DATES ONLY, no guest names (landlord-safe).
+function aptOccupancyLine(room){
+  const fmt=d=>d?d.toLocaleDateString(lang==='es'?'es-ES':'en-GB',{day:'2-digit',month:'short'}):'';
+  const cur=reservations.find(r=>r.apt===room.room_id && r.checkin && r.checkout && r.checkin<=TODAY && r.checkout>TODAY);
+  if(cur) return `<b>${t('apt.occupied_until')}</b> ${fmt(cur.checkout)}`;
+  const next=reservations.filter(r=>r.apt===room.room_id && r.checkin && r.checkin>TODAY).sort((a,b)=>a.checkin-b.checkin)[0];
+  if(next) return `${t('apt.next_in')} ${fmt(next.checkin)}`;
+  return `<b>${t('apt.vacant')}</b>`;
+}
+// 3-button status toggle — only rendered for landlord/owner (manage_apartment_status).
+function aptSegControl(room){
+  if(!hasPermission('manage_apartment_status')) return '';
+  const cur=aptStatusOf(room);
+  return `<div class="apt-seg">`+APT_STATUSES.map(s=>
+    `<button class="s-${s}${s===cur?' active':''}" onclick="setRoomStatus('${room.id}','${s}')">${t('apt.'+s)}</button>`
+  ).join('')+`</div>`;
+}
+function renderApartments(){
+  const grid=document.getElementById('aptGrid');
+  if(!grid) return;
+  if(!rooms.length){ grid.innerHTML=`<div class="apt-empty">${t('empty.rooms')}</div>`; return; }
+  grid.innerHTML='';
+  rooms.forEach(room=>{
+    const status=aptStatusOf(room);
+    const card=document.createElement('div');
+    card.className='apt-card';
+    card.innerHTML=`
+      <div class="apt-card__status apt-card__status--${status}">${t('apt.'+status)}</div>
+      <img class="apt-card__img" alt="" src="${aptPlaceholder(room.room_id)}">
+      <div class="apt-card__body">
+        <div class="apt-card__id">${t('apt.apartment')}: ${room.room_id}</div>
+        <div class="apt-card__occ"><span style="color:var(--muted)">${t('apt.occupancy')}:</span> ${aptOccupancyLine(room)}</div>
+        ${aptSegControl(room)}
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+// Landlord/owner-only status write — goes through the SECURITY DEFINER RPC (set_room_status).
+async function setRoomStatus(id,status){
+  if(!hasPermission('manage_apartment_status')) return;
+  if(!APT_STATUSES.includes(status)) return;
+  const room=rooms.find(r=>r.id===id);
+  if(!room || aptStatusOf(room)===status) return;
+  const prev=room.status;
+  room.status=status;                          // optimistic
+  renderApartments(); renderRoomsList();
+  if(HAS_DB){
+    try{
+      const {error}=await db.rpc('set_room_status',{p_room:id,p_status:status});
+      if(error) throw error;
+      showToast(`${room.room_id} → ${t('apt.'+status)}`,'success');
+    }catch(e){
+      room.status=prev;                        // revert on failure
+      renderApartments(); renderRoomsList();
+      showToast('Status update failed: '+e.message,'error');
+    }
+  }
+}
+
 // ── ROOMS MANAGEMENT ─────────────────────────────────
 function renderRoomsList(){
   const list=document.getElementById('roomsList');
@@ -2352,6 +2549,10 @@ function renderRoomsList(){
     const div=document.createElement('div');
     div.className='admin-list-item';
     if(extraStyle) div.style.cssText = extraStyle;
+    const stat=aptStatusOf(r);
+    const statusRow = hasPermission('manage_apartment_status')
+      ? `<div style="margin-top:10px;max-width:320px;">${aptSegControl(r)}</div>`
+      : `<div style="margin-top:8px;font-size:11px;font-family:'DM Mono',monospace;color:${aptStatusColor(stat)};">● ${t('apt.'+stat)}</div>`;
     div.innerHTML=`
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
@@ -2359,7 +2560,8 @@ function renderRoomsList(){
           <div class="room-item-meta">${r.name||''} ${r.capacity?'· '+r.capacity+' guests':''} ${r.floor?'· Floor '+r.floor:''}</div>
         </div>
         <button class="btn-delete" onclick="deleteRoomById('${r.id}')">&#128465;</button>
-      </div>`;
+      </div>
+      ${statusRow}`;
     list.appendChild(div);
   });
 }
@@ -2498,7 +2700,7 @@ function _paintUsers(list,data){
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div>
           <div class="ali-name">${u.name||u.email||'—'} ${isMe?'<span style="font-size:10px;color:var(--muted);font-weight:400">(you)</span>':''}</div>
-          <div class="ali-meta">${u.name?`<span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${u.email}</span> &nbsp;·&nbsp; `:''}Role: <strong style="color:${isOwner?'var(--accent)':u.role==='tech_staff'?'var(--warn)':'var(--accent2)'}">${u.role==='tech_staff'?'Tech Staff':u.role}</strong> &nbsp;·&nbsp; ${isSuspended?'<span style="color:var(--danger);font-weight:600">Suspended</span>':linked?'Active':'Pending first login'}</div>
+          <div class="ali-meta">${u.name?`<span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${u.email}</span> &nbsp;·&nbsp; `:''}Role: <strong style="color:${isOwner?'var(--accent)':u.role==='tech_staff'?'var(--warn)':u.role==='landlord'?'#b794f6':'var(--accent2)'}">${u.role==='tech_staff'?'Tech Staff':u.role==='landlord'?'Landlord':u.role}</strong> &nbsp;·&nbsp; ${isSuspended?'<span style="color:var(--danger);font-weight:600">Suspended</span>':linked?'Active':'Pending first login'}</div>
         </div>
         <div class="ali-actions">
           ${currentRole==='owner'&&!isMe&&!isOwner&&!isSuspended&&u.role==='staff'?`<button class="btn-edit" onclick="changeUserRole('${u.id}','tech_staff')" title="Promote to Tech Staff">→ Tech</button>`:''}
@@ -2806,7 +3008,7 @@ async function fetchRole(userId, email){
 function applyRoleUI(){
   // Badge
   const badge=document.getElementById('roleBadge');
-  if(badge) badge.textContent=currentRole==='owner'?'OWNER':currentRole==='tech_staff'?'TECH':'STAFF';
+  if(badge) badge.textContent=currentRole==='owner'?'OWNER':currentRole==='landlord'?'LANDLORD':currentRole==='tech_staff'?'TECH':'STAFF';
   // User email + logout
   const emailEl=document.getElementById('userEmailDisplay');
   if(emailEl){emailEl.textContent=currentUser?.email||'';emailEl.style.display='inline';}
