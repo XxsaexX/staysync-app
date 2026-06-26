@@ -842,6 +842,10 @@ tr:hover .code-cell.hidden{filter:blur(0);}
 const IS_CONFIGURED = !Object.values(CONFIG).some(v=>v.startsWith('YOUR_'));
 const HAS_DB        = IS_CONFIGURED && !!CONFIG.SUPABASE_URL;
 const db            = HAS_DB ? supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY) : null;
+// Public guest portal base — the door-code email appends `#<guest_token>`.
+// Guests must reach the PUBLIC Pages copy (no auth); override here if the
+// portal moves to a custom domain. The EmailJS template renders {{portal_link}}.
+const PORTAL_BASE   = 'https://xxsaexx.github.io/staysync-app/stay.html';
 
 // ── PERMISSIONS ───────────────────────────────────────
 // Default permission sets per role.
@@ -1773,6 +1777,8 @@ async function sendEmail(r){
     to_name:r.name.split(' ')[0],to_email:r.email,apartment:r.apt,floor:floorLabel,
     door_code:r.code,nights:r.nights,full_name:r.name,
     checkin_date:fmtDate(r.checkin),checkout_date:fmtDate(r.checkout),
+    // Guest self-service portal link (empty until the guest-portal migration adds guest_token).
+    portal_link:r.guest_token?`${PORTAL_BASE}#${r.guest_token}`:'',
   };
   const MAX_RETRIES=3;
   for(let attempt=1;attempt<=MAX_RETRIES;attempt++){
