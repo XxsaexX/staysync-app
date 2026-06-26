@@ -1011,6 +1011,9 @@ const STRINGS={
     'rp.title':'Reservation','rp.apartment':'Apartment','rp.checkin':'Check-in','rp.checkout':'Check-out',
     'rp.nights':'Nights','rp.email':'Email','rp.code':'Door code','rp.edit':'Edit','rp.close':'Close',
     'rp.double':'Double-booked','rp.s_arriving':'Arriving','rp.s_future':'Upcoming','rp.s_sent':'Code sent',
+    'rp.guest_arrival':'Guest arrival',
+    'guest.announced':'Guest confirmed arrival','guest.enroute':'En route','guest.eta_prefix':'ETA',
+    'eta.30':'under 30 min','eta.1h':'about 1 hour','eta.23h':'2–3 hours','eta.eve':'this evening','eta.tom':'tomorrow',
     'modal.validating':'Validating reservation',
     'modal.desc':'Checking door code matches apartment before sending.',
     'check.found':'Reservation found for today','check.no_conflict':'No double-booking conflict',
@@ -1101,6 +1104,9 @@ const STRINGS={
     'rp.title':'Reserva','rp.apartment':'Apartamento','rp.checkin':'Entrada','rp.checkout':'Salida',
     'rp.nights':'Noches','rp.email':'Email','rp.code':'Código','rp.edit':'Editar','rp.close':'Cerrar',
     'rp.double':'Doble reserva','rp.s_arriving':'Llegando','rp.s_future':'Próxima','rp.s_sent':'Código enviado',
+    'rp.guest_arrival':'Llegada del huésped',
+    'guest.announced':'Huésped confirmó llegada','guest.enroute':'En camino','guest.eta_prefix':'Llega',
+    'eta.30':'menos de 30 min','eta.1h':'aprox. 1 hora','eta.23h':'2–3 horas','eta.eve':'esta tarde','eta.tom':'mañana',
     'modal.validating':'Validando reserva',
     'modal.desc':'Comprobando que el código de puerta coincide con el apartamento.',
     'check.found':'Reserva encontrada para hoy','check.no_conflict':'Sin conflicto de doble reserva',
@@ -1561,6 +1567,28 @@ function renderCalendar(){
 }
 
 // ── RESERVATION QUICK PREVIEW (opened by clicking a calendar entry) ──
+// ── GUEST SELF-ARRIVAL (token portal) ────────────────
+// Guests announce their own arrival via the token-gated stay.html portal; the
+// server writes guest_announced_at / guest_eta (enum). This is DISTINCT from the
+// staff-toggled `status` (future→arriving→sent) and the date-derived "Arriving Today".
+const GUEST_ETA_KEYS={'<30min':'eta.30','~1h':'eta.1h','2-3h':'eta.23h','this_evening':'eta.eve','tomorrow':'eta.tom'};
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+// ETA is a server-enforced enum; map to a localized label, but escape any unknown
+// value as belt-and-suspenders for when free-text ETA returns in v2.
+function guestEtaLabel(eta){ if(!eta) return ''; return GUEST_ETA_KEYS[eta]?t(GUEST_ETA_KEYS[eta]):escHtml(eta); }
+function guestArrived(r){ return !!(r&&r.guest_announced_at); }
+// Green "confirmed arrival" chip with optional ETA. `size`: 'sm' for the table.
+function guestArrivalChip(r,size){
+  const eta=guestEtaLabel(r.guest_eta);
+  const small=size==='sm';
+  const etaTxt=eta?(small?' · '+eta:' · '+t('guest.eta_prefix')+' '+eta):'';
+  const label=small?t('guest.enroute'):t('guest.announced');
+  const fs=small?'10px':'11px', pad=small?'1px 7px':'3px 10px', rad=small?'10px':'20px';
+  return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:${fs};font-weight:700;`
+    +`font-family:'DM Mono',monospace;padding:${pad};border-radius:${rad};color:var(--success);`
+    +`border:1px solid var(--success);background:rgba(66,245,164,0.08);">&#10003; ${label}${etaTxt}</span>`;
+}
+
 function openReservationPreview(id){
   const r=reservations.find(x=>String(x.id)===String(id));
   if(!r) return;
@@ -1581,7 +1609,8 @@ function openReservationPreview(id){
     +row(t('rp.checkout'), fmt(r.checkout))
     +row(t('rp.nights'), (r.nights||'—')+'')
     +row(t('rp.email'), r.email?`<a href="mailto:${r.email}" style="color:var(--accent2);text-decoration:none;">${r.email}</a>`:'—')
-    +row(t('rp.code'), `<span style="font-family:'DM Mono',monospace;letter-spacing:1px;">${code}</span>`);
+    +row(t('rp.code'), `<span style="font-family:'DM Mono',monospace;letter-spacing:1px;">${code}</span>`)
+    +(guestArrived(r)?row(t('rp.guest_arrival'), guestArrivalChip(r)):'');
   const acts=[];
   if(hasPermission('edit_reservations')) acts.push(`<button class="btn-confirm" style="flex:1;" onclick="closeResPreview();editReservation('${r.id}')">&#9998; ${t('rp.edit')}</button>`);
   acts.push(`<button class="btn-cancel" style="flex:${acts.length?'0 0 auto':'1'};" onclick="closeResPreview()">${t('rp.close')}</button>`);
@@ -1626,7 +1655,7 @@ function renderTable(){
       :`<span class="code-cell" id="code-${r.id}" style="color:var(--muted);letter-spacing:normal;font-size:12px;">••••</span>`;
     const fmtDate=d=>d?d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'—';
     tr.innerHTML=`
-      <td><div style="font-weight:500">${r.name}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${r.email}</div></td>
+      <td><div style="font-weight:500">${r.name}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${r.email}</div>${guestArrived(r)?`<div style="margin-top:3px">${guestArrivalChip(r,'sm')}</div>`:''}</td>
       <td><span class="apt-tag">${r.apt}</span></td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${fmtDate(r.checkin)}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${fmtDate(r.checkout)}</td>
@@ -2486,6 +2515,18 @@ function aptOccupancyLine(room){
   if(next) return `${t('apt.next_in')} ${fmt(next.checkin)}`;
   return `<b>${t('apt.vacant')}</b>`;
 }
+// Guest-arrival indicator for the board — DATES/ETA ONLY, no guest name (landlord-safe).
+// Surfaces the imminent self-announced arrival for this apartment (active or upcoming).
+function aptGuestArrivalLine(room){
+  const r=reservations
+    .filter(x=>x.apt===room.room_id && guestArrived(x) && x.checkout && x.checkout>=TODAY)
+    .sort((a,b)=>(a.checkin||new Date(0))-(b.checkin||new Date(0)))[0];
+  if(!r) return '';
+  const eta=guestEtaLabel(r.guest_eta);
+  return `<div class="apt-card__arrival" style="margin-top:6px;font-size:11px;font-weight:700;`
+    +`font-family:'DM Mono',monospace;color:var(--success);">&#10003; ${t('guest.announced')}`
+    +`${eta?' · '+t('guest.eta_prefix')+' '+eta:''}</div>`;
+}
 // 3-button status toggle — only rendered for landlord/owner (manage_apartment_status).
 function aptSegControl(room){
   if(!hasPermission('manage_apartment_status')) return '';
@@ -2509,6 +2550,7 @@ function renderApartments(){
       <div class="apt-card__body">
         <div class="apt-card__id">${t('apt.apartment')}: ${room.room_id}</div>
         <div class="apt-card__occ"><span style="color:var(--muted)">${t('apt.occupancy')}:</span> ${aptOccupancyLine(room)}</div>
+        ${aptGuestArrivalLine(room)}
         ${aptSegControl(room)}
       </div>`;
     grid.appendChild(card);

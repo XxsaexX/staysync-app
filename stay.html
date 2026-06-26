@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="referrer" content="no-referrer" />
+  <!-- Strict CSP: no third-party JS/CSS; only our own files + the RPC endpoint.
+       The token rides in the URL #fragment, so any script on the page could read
+       it — this CSP is load-bearing, not defense-in-depth. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://hfrehnjupjbjmurfjczm.supabase.co; base-uri 'none'; form-action 'none'" />
+  <title>Your stay · StaySync</title>
+  <link rel="stylesheet" href="stay.css" />
+</head>
+<body>
+  <main class="wrap" aria-live="polite">
+
+    <!-- LOADING -->
+    <section id="loading" class="card center">
+      <div class="spinner" role="status" aria-label="Loading"></div>
+      <p class="muted" data-i18n="loading">Loading your stay…</p>
+    </section>
+
+    <!-- ERROR (invalid / unknown link) -->
+    <section id="error" class="card center hidden">
+      <h1 class="serif" data-i18n="err_title">Link not valid</h1>
+      <p class="muted" id="error-msg" data-i18n="err_body">
+        This link isn’t valid. Please use the most recent link from your booking email.
+      </p>
+    </section>
+
+    <!-- STAY -->
+    <section id="stay" class="hidden">
+      <header class="card head">
+        <p class="eyebrow" data-i18n="eyebrow">YOUR STAY</p>
+        <h1 class="serif" id="greeting">Welcome</h1>
+        <div id="state-banner" class="banner hidden"></div>
+      </header>
+
+      <section class="card">
+        <div class="grid">
+          <div class="cell">
+            <span class="label" data-i18n="apartment">Apartment</span>
+            <span class="value" id="apartment">—</span>
+          </div>
+          <div class="cell">
+            <span class="label" data-i18n="nights">Nights</span>
+            <span class="value" id="nights">—</span>
+          </div>
+          <div class="cell">
+            <span class="label" data-i18n="checkin">Check-in</span>
+            <span class="value" id="checkin">—</span>
+          </div>
+          <div class="cell">
+            <span class="label" data-i18n="checkout">Check-out</span>
+            <span class="value" id="checkout">—</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- DOOR CODE: nothing fetched until the guest taps (defeats headless scanners) -->
+      <section class="card" id="code-card">
+        <span class="label" data-i18n="door_code">Door code</span>
+        <div id="code-locked">
+          <button id="reveal-btn" class="btn ghost" type="button" data-i18n="reveal">Tap to reveal code</button>
+        </div>
+        <div id="code-shown" class="hidden">
+          <span class="code mono" id="code-value">••••</span>
+        </div>
+        <p class="hint muted" id="code-hint" data-i18n="code_hint">
+          For your security the code is shown only during your stay window.
+        </p>
+      </section>
+
+      <!-- ARRIVAL -->
+      <section class="card" id="arrive-card">
+        <span class="label" data-i18n="arrival">Arrival</span>
+        <div id="arrive-form">
+          <p class="muted" data-i18n="arrive_prompt">Let the host know you’re on the way.</p>
+          <label class="field">
+            <span class="label" data-i18n="eta">Estimated arrival</span>
+            <select id="eta-select" class="select">
+              <option value="" data-i18n="eta_choose">Choose…</option>
+              <option value="&lt;30min" data-i18n="eta_30">Under 30 min</option>
+              <option value="~1h" data-i18n="eta_1h">About 1 hour</option>
+              <option value="2-3h" data-i18n="eta_23h">2–3 hours</option>
+              <option value="this_evening" data-i18n="eta_eve">This evening</option>
+              <option value="tomorrow" data-i18n="eta_tom">Tomorrow</option>
+            </select>
+          </label>
+          <button id="arrive-btn" class="btn primary" type="button" data-i18n="arrive_cta">I’m arriving</button>
+        </div>
+        <div id="arrive-done" class="hidden confirm">
+          <span class="check" aria-hidden="true">✓</span>
+          <p data-i18n="arrive_thanks">Thanks — your host has been notified.</p>
+          <p class="muted" id="arrive-eta-line"></p>
+        </div>
+      </section>
+
+      <!-- MINIMAL STATIC CHECK-IN -->
+      <section class="card" id="checkin-card">
+        <span class="label" data-i18n="getting_in">Getting in</span>
+        <p class="muted" data-i18n="checkin_text">
+          Enter the door code on the keypad at the main entrance. If the keypad doesn’t
+          respond, hold the # key for two seconds and try again. Trouble? Reply to your
+          booking email and the host will help.
+        </p>
+      </section>
+
+      <footer class="foot">
+        <button id="lang-toggle" class="linkbtn" type="button">ES</button>
+        <span class="muted small">StaySync</span>
+      </footer>
+    </section>
+
+  </main>
+  <script src="stay.js" defer></script>
+</body>
+</html>
